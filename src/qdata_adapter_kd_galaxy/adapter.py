@@ -3,17 +3,18 @@ KdGalaxyAdapter
 
 适配器主类 - 组合器模式实现
 单一接口适配器实现
+
+金蝶云星空 API 基于 Cookie 会话的 WebAPI
 """
 
 from __future__ import annotations
 
 import logging
-import time
 from typing import Any, AsyncIterator
 
 from qdata_adapter import BaseAppAdapter
 from qdata_adapter.context import ConnectorContext
-from qdata_adapter.exceptions import TestConnectionResult
+from qdata_adapter import TestConnectionResult
 
 from qdata_adapter_kd_galaxy.interfaces.base import BaseInterface
 from qdata_adapter_kd_galaxy.interfaces.standard import KdGalaxyAdapterStandardInterface
@@ -24,14 +25,26 @@ logger = logging.getLogger(__name__)
 class KdGalaxyAdapter(BaseAppAdapter):
     """
     kd-galaxy 适配器
-    标准适配器实现，基于 standard 接口
+
+    标准适配器实现，基于金蝶云星空 standard 接口。
+
+    金蝶云星空 API 特点：
+    - Cookie-based 会话认证
+    - ExecuteBillQuery 用于列表查询
+    - View 用于单条查询
+    - Save/Submit/Audit/UnAudit/Delete 用于单据操作
 
     Example:
         >>> context = ConnectorContext(
         ...     connector_id="my-connector",
         ...     app_software_code="kd_galaxy",
-        ...     base_url="https://api.example.com",
-        ...     auth_config={"client_id": "xxx", "client_secret": "yyy"},
+        ...     base_url="https://api.example.com/k3cloud/",
+        ...     auth_config={
+        ...         "acct_id": "YOUR_DATA_CENTER_ID",
+        ...         "username": "YOUR_USERNAME",
+        ...         "app_id": "YOUR_APP_ID",
+        ...         "app_secret": "YOUR_APP_SECRET",
+        ...     },
         ... )
         >>> adapter = KdGalaxyAdapter(context)
         >>> result = await adapter.test_connection()
@@ -51,7 +64,6 @@ class KdGalaxyAdapter(BaseAppAdapter):
         Note:
             context.settings.interface 控制接口路由：
             - "standard"（默认）
-            - "enterprise"（如启用双接口）
         """
         super().__init__(context, token_cache)
         self._interface = self._resolve_interface()
@@ -67,16 +79,14 @@ class KdGalaxyAdapter(BaseAppAdapter):
         Returns:
             接口实现实例
         """
-        # 单一接口模式
-        return KdGalaxyAdapterStandardInterface(
-            self.context, self.http_client
-        )
+        # 单一接口模式 - 始终使用 standard 接口
+        return KdGalaxyAdapterStandardInterface(self.context)
 
     async def authenticate(self) -> dict[str, Any]:
         """
         获取认证凭证
 
-        委托给当前接口实现
+        委托给当前接口实现进行 Cookie 会话认证
         """
         return await self._interface.authenticate()
 
@@ -84,9 +94,9 @@ class KdGalaxyAdapter(BaseAppAdapter):
         """
         刷新认证凭证
 
-        委托给当前接口实现
+        金蝶云星空使用 Cookie 会话，不需要刷新
+        重新调用 authenticate() 获取新会话
         """
-        # 对于大多数接口，refresh 与 authenticate 相同
         return await self._interface.authenticate()
 
     async def list_objects(
@@ -96,9 +106,17 @@ class KdGalaxyAdapter(BaseAppAdapter):
         page_size: int = 100,
     ) -> AsyncIterator[dict[str, Any]]:
         """
-        列表查询
+        列表查询（自动翻页）
 
-        委托给当前接口实现
+        使用 ExecuteBillQuery 接口查询列表数据
+
+        Args:
+            object_type: 表单ID，如 "SAL_OUTSTOCK", "BD_MATERIAL"
+            filters: 过滤条件，支持 FieldKeys, FilterString, OrderString 等
+            page_size: 每页大小
+
+        Yields:
+            单条记录字典
         """
         async for item in self._interface.list_objects(object_type, filters, page_size):
             yield item
@@ -113,7 +131,6 @@ class KdGalaxyAdapter(BaseAppAdapter):
         查询对象列表（工作流节点优先使用此方法）
 
         这是 list_objects() 的别名，用于与工作流节点的契约匹配。
-        工作流节点首先查找 query_objects()，其次才是 list_objects()。
 
         Args:
             object_type: 对象类型
@@ -122,10 +139,6 @@ class KdGalaxyAdapter(BaseAppAdapter):
 
         Yields:
             单条记录字典
-
-        Example:
-            >>> async for item in adapter.query_objects("orders", {"status": "pending"}):
-            ...     print(item["id"])
         """
         async for item in self._interface.list_objects(object_type, filters, page_size):
             yield item
@@ -134,7 +147,14 @@ class KdGalaxyAdapter(BaseAppAdapter):
         """
         获取单个对象
 
-        委托给当前接口实现
+        使用 View 接口查询单据详情
+
+        Args:
+            object_type: 表单ID
+            object_id: 单据ID（编号或内码）
+
+        Returns:
+            单据详情字典
         """
         return await self._interface.get_object(object_type, object_id)
 
@@ -142,9 +162,100 @@ class KdGalaxyAdapter(BaseAppAdapter):
         """
         创建对象
 
-        委托给当前接口实现
+        使用 Save 接口保存单据
+
+        Args:
+            object_type: 表单ID
+            data: 单据数据
+
+        Returns:
+            创建结果
         """
         return await self._interface.create_object(object_type, data)
+
+    async def submit_object(
+        self,
+        object_type: str,
+        object_id: str | None = None,
+        numbers: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """
+        提交单据
+
+        Args:
+            object_type: 表单ID
+            object_id: 单据内码
+            numbers: 单据编号列表
+
+        Returns:
+            提交结果
+        """
+        return await self._interface.submit_object(
+            object_type, object_id=object_id, numbers=numbers
+        )
+
+    async def audit_object(
+        self,
+        object_type: str,
+        object_id: str | None = None,
+        numbers: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """
+        审核单据
+
+        Args:
+            object_type: 表单ID
+            object_id: 单据内码
+            numbers: 单据编号列表
+
+        Returns:
+            审核结果
+        """
+        return await self._interface.audit_object(
+            object_type, object_id=object_id, numbers=numbers
+        )
+
+    async def unaudit_object(
+        self,
+        object_type: str,
+        object_id: str | None = None,
+        numbers: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """
+        反审核单据
+
+        Args:
+            object_type: 表单ID
+            object_id: 单据内码
+            numbers: 单据编号列表
+
+        Returns:
+            反审核结果
+        """
+        return await self._interface.unaudit_object(
+            object_type, object_id=object_id, numbers=numbers
+        )
+
+    async def delete_object(
+        self,
+        object_type: str,
+        object_id: str | None = None,
+        numbers: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """
+        删除单据
+
+        Args:
+            object_type: 表单ID
+            object_id: 单据内码
+            numbers: 单据编号列表
+
+        Returns:
+            删除结果
+        """
+        return await self._interface.delete_object(
+            object_type, object_id=object_id, numbers=numbers
+        )
 
     async def invoke(
         self,
@@ -156,84 +267,25 @@ class KdGalaxyAdapter(BaseAppAdapter):
         """
         统一的 API 调用方法
 
-        对于拥有成百上千个 API 的平台，此方法提供灵活的统一调用入口。
-        支持任意 API 方法（query/get/create/update/delete 等），
-        而不局限于 list_objects/get_object/create_object 三种操作。
-
-        默认实现会路由到对应的标准方法，子类可以覆盖实现更复杂的逻辑。
+        支持金蝶云星空的所有标准操作：
+        - query/list: ExecuteBillQuery 列表查询
+        - get/view: View 单条查询
+        - create/save: Save 保存
+        - submit: Submit 提交
+        - audit: Audit 审核
+        - unaudit: UnAudit 反审核
+        - delete: Delete 删除
 
         Args:
-            method: API 方法名，如 "query", "get", "create", "update", "delete"
-            object_type: 对象类型，如 "orders", "products"
-            data: 请求体数据（用于 create/update 等）
-            params: 查询参数（用于 query/get 等）
+            method: API 方法名
+            object_type: 表单ID
+            data: 请求体数据
+            params: 查询参数
 
         Returns:
             API 响应数据
-
-        Raises:
-            KdGalaxyAdapterAuthError: 认证失败
-            KdGalaxyAdapterAPIError: API 调用失败
-            NotImplementedError: 方法不支持
-
-        Example:
-            >>> # 查询列表
-            >>> result = await adapter.invoke(
-            ...     "query", "orders",
-            ...     params={"status": "pending"}
-            ... )
-            >>>
-            >>> # 获取单条
-            >>> result = await adapter.invoke(
-            ...     "get", "orders",
-            ...     params={"id": "ORD001"}
-            ... )
-            >>>
-            >>> # 创建对象
-            >>> result = await adapter.invoke(
-            ...     "create", "orders",
-            ...     data={"customer": "张三", "amount": 100}
-            ... )
-            >>>
-            >>> # 调用平台特有 API
-            >>> result = await adapter.invoke(
-            ...     "jky.goods.batchupdateflag",
-            ...     "goods",
-            ...     data={"goods_ids": ["1", "2"], "flag": 1}
-            ... )
         """
-        # 委托给接口实现
-        if hasattr(self._interface, 'invoke'):
-            return await self._interface.invoke(method, object_type, data, params)
-
-        # 默认路由到标准方法
-        if method in ("list", "query"):
-            results = []
-            async for item in self._interface.list_objects(
-                object_type, filters=params, page_size=100
-            ):
-                results.append(item)
-            return {"data": results, "total": len(results)}
-
-        elif method == "get":
-            object_id = params.get("id") if params else None
-            if not object_id:
-                raise ValueError("'get' method requires params['id']")
-            result = await self._interface.get_object(object_type, object_id)
-            return {"data": result}
-
-        elif method == "create":
-            if not data:
-                raise ValueError("'create' method requires data")
-            result = await self._interface.create_object(object_type, data)
-            return {"data": result}
-
-        else:
-            raise NotImplementedError(
-                f"Method '{method}' not implemented in interface. "
-                f"Please override invoke() in your interface class or "
-                f"implement a custom method handler."
-            )
+        return await self._interface.invoke(method, object_type, data, params)
 
     async def test_connection(self) -> TestConnectionResult:
         """

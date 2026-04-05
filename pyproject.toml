@@ -30,9 +30,8 @@ classifiers = [
 ]
 dependencies = [
     "qdata-adapter-base>=1.0.0",
-    "httpx>=0.25.0",
+    "kingdee.cdp.webapi.sdk>=8.2.0",
     "pydantic>=2.0.0",
-    "tenacity>=8.2.0",
 ]
 
 [project.optional-dependencies]
