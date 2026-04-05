@@ -17,8 +17,8 @@ from typing import Any
 
 import pytest
 from dotenv import load_dotenv
-
 from qdata_adapter import ConnectorContext
+
 from qdata_adapter_kd_galaxy import KdGalaxyAdapter
 
 # 加载 .env 配置
@@ -157,12 +157,12 @@ class TestBDBankE2E:
             "FRemark": f"E2E测试创建于 {current_time}",
         }
 
-        logger.info(f"\n  创建银行:")
+        logger.info("\n  创建银行:")
         logger.info(f"    FNumber: {new_bank_data['FNumber']}")
         logger.info(f"    FName: {new_bank_data['FName']}")
 
         result = await adapter.create_object("BD_BANK", new_bank_data)
-        logger.info(f"\n  保存结果:")
+        logger.info("\n  保存结果:")
         logger.info(f"    Id: {result.get('Id')}")
         logger.info(f"    Number: {result.get('Number')}")
         logger.info(f"    Success: {result.get('ResponseStatus', {}).get('IsSuccess')}")
@@ -187,7 +187,7 @@ class TestBDBankE2E:
 
         # 读取刚创建的银行
         try:
-            with open("/tmp/e2e_saved_bank.json", "r", encoding="utf-8") as f:
+            with open("/tmp/e2e_saved_bank.json", encoding="utf-8") as f:
                 saved_bank = json.load(f)
             bank_number = saved_bank.get("number")
         except Exception:
@@ -196,7 +196,7 @@ class TestBDBankE2E:
         logger.info(f"\n  提交银行: {bank_number}")
 
         result = await adapter.submit_object("BD_BANK", numbers=[bank_number])
-        logger.info(f"\n  提交结果:")
+        logger.info("\n  提交结果:")
         logger.info(f"    Success: {result.get('ResponseStatus', {}).get('IsSuccess')}")
         logger.info(f"    SuccessEntitys: {result.get('SuccessEntitys')}")
 
@@ -211,7 +211,7 @@ class TestBDBankE2E:
 
         # 读取刚创建的银行
         try:
-            with open("/tmp/e2e_saved_bank.json", "r", encoding="utf-8") as f:
+            with open("/tmp/e2e_saved_bank.json", encoding="utf-8") as f:
                 saved_bank = json.load(f)
             bank_number = saved_bank.get("number")
         except Exception:
@@ -220,7 +220,7 @@ class TestBDBankE2E:
         logger.info(f"\n  审核银行: {bank_number}")
 
         result = await adapter.audit_object("BD_BANK", numbers=[bank_number])
-        logger.info(f"\n  审核结果:")
+        logger.info("\n  审核结果:")
         logger.info(f"    Success: {result.get('ResponseStatus', {}).get('IsSuccess')}")
         logger.info(f"    SuccessEntitys: {result.get('SuccessEntitys')}")
 
@@ -235,7 +235,7 @@ class TestBDBankE2E:
 
         # 读取刚创建的银行
         try:
-            with open("/tmp/e2e_saved_bank.json", "r", encoding="utf-8") as f:
+            with open("/tmp/e2e_saved_bank.json", encoding="utf-8") as f:
                 saved_bank = json.load(f)
             bank_number = saved_bank.get("number")
         except Exception:
@@ -244,7 +244,7 @@ class TestBDBankE2E:
         logger.info(f"\n  反审核银行: {bank_number}")
 
         result = await adapter.unaudit_object("BD_BANK", numbers=[bank_number])
-        logger.info(f"\n  反审核结果:")
+        logger.info("\n  反审核结果:")
         logger.info(f"    Success: {result.get('ResponseStatus', {}).get('IsSuccess')}")
         logger.info(f"    SuccessEntitys: {result.get('SuccessEntitys')}")
 
@@ -259,7 +259,7 @@ class TestBDBankE2E:
 
         # 读取刚创建的银行
         try:
-            with open("/tmp/e2e_saved_bank.json", "r", encoding="utf-8") as f:
+            with open("/tmp/e2e_saved_bank.json", encoding="utf-8") as f:
                 saved_bank = json.load(f)
             bank_number = saved_bank.get("number")
         except Exception:
@@ -268,7 +268,7 @@ class TestBDBankE2E:
         logger.info(f"\n  删除银行: {bank_number}")
 
         result = await adapter.delete_object("BD_BANK", numbers=[bank_number])
-        logger.info(f"\n  删除结果:")
+        logger.info("\n  删除结果:")
         logger.info(f"    Success: {result.get('ResponseStatus', {}).get('IsSuccess')}")
         logger.info(f"    SuccessEntitys: {result.get('SuccessEntitys')}")
 
@@ -336,7 +336,7 @@ class TestPURPurchaseOrderE2E:
             logger.error(f"   查询详情失败: {e}")
 
         # 3. 创建采购订单
-        logger.info(f"\n3. Save - 创建采购订单")
+        logger.info("\n3. Save - 创建采购订单")
 
         supplier = orders[0].get("FSupplierId", {})
         supplier_number = None
@@ -367,17 +367,17 @@ class TestPURPurchaseOrderE2E:
 
                 # 4. 提交
                 if new_order_no:
-                    logger.info(f"\n4. Submit - 提交采购订单")
+                    logger.info("\n4. Submit - 提交采购订单")
                     submit_result = await adapter.submit_object("PUR_PurchaseOrder", numbers=[new_order_no])
                     logger.info(f"   提交结果: {submit_result.get('ResponseStatus', {}).get('IsSuccess')}")
 
                     # 5. 审核
-                    logger.info(f"\n5. Audit - 审核采购订单")
+                    logger.info("\n5. Audit - 审核采购订单")
                     audit_result = await adapter.audit_object("PUR_PurchaseOrder", numbers=[new_order_no])
                     logger.info(f"   审核结果: {audit_result.get('ResponseStatus', {}).get('IsSuccess')}")
 
                     # 6. 反审核
-                    logger.info(f"\n6. UnAudit - 反审核采购订单")
+                    logger.info("\n6. UnAudit - 反审核采购订单")
                     unaudit_result = await adapter.unaudit_object("PUR_PurchaseOrder", numbers=[new_order_no])
                     logger.info(f"   反审核结果: {unaudit_result.get('ResponseStatus', {}).get('IsSuccess')}")
 
@@ -411,7 +411,7 @@ class TestInvokeInterface:
             params={"FieldKeys": "FNumber,FName", "Limit": 3},
         )
 
-        logger.info(f"\n  查询结果:")
+        logger.info("\n  查询结果:")
         logger.info(f"    total: {result.get('total')}")
         logger.info(f"    data count: {len(result.get('data', []))}")
 
@@ -468,7 +468,7 @@ class TestInvokeInterface:
 
         result = await adapter.invoke("save", "BD_BANK", data=save_data)
 
-        logger.info(f"\n  保存结果:")
+        logger.info("\n  保存结果:")
         logger.info(f"    Id: {result.get('data', {}).get('Id')}")
         logger.info(f"    Number: {result.get('data', {}).get('Number')}")
 

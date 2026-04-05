@@ -7,12 +7,13 @@
 """
 
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+from qdata_adapter import ConnectorContext
 
 from qdata_adapter_kd_galaxy import KdGalaxyAdapter
-from qdata_adapter import ConnectorContext
+from qdata_adapter_kd_galaxy.exceptions import KdGalaxyAdapterAuthError
 
 
 class TestKdGalaxyAdapter:
@@ -120,7 +121,7 @@ class TestKdGalaxyAdapter:
         ):
             adapter = KdGalaxyAdapter(standard_context, mock_token_cache)
 
-            with pytest.raises(Exception):
+            with pytest.raises(KdGalaxyAdapterAuthError):
                 await adapter.authenticate()
 
     @pytest.mark.asyncio
@@ -228,6 +229,87 @@ class TestKdGalaxyAdapter:
 
             assert result["Id"] == 100002
             assert result["Number"] == "SAL_NEW_001"
+
+    @pytest.mark.asyncio
+    async def test_update_object_success(
+        self,
+        standard_context: ConnectorContext,
+        mock_token_cache: Any,
+        mock_sdk_class: MagicMock,
+    ) -> None:
+        """测试更新对象"""
+        # 配置 save 返回更新成功
+        mock_sdk = mock_sdk_class.return_value
+        mock_sdk.save.return_value = {
+            "Result": {
+                "ResponseStatus": {
+                    "IsSuccess": True,
+                    "SuccessEntitys": [{"Id": 100001, "Number": "SAL001"}],
+                },
+                "Id": 100001,
+                "Number": "SAL001",
+            }
+        }
+
+        with patch(
+            "qdata_adapter_kd_galaxy.interfaces.standard.KdGalaxySDK",
+            mock_sdk_class,
+        ):
+            adapter = KdGalaxyAdapter(standard_context, mock_token_cache)
+            # 更新数据，包含 FID 表示这是更新操作
+            data = {
+                "FID": 100001,
+                "FNote": "Updated note via adapter",
+            }
+            result = await adapter.update_object("SAL_SaleOrder", "100001", data)
+
+            assert result["Id"] == 100001
+            assert result["Number"] == "SAL001"
+            assert result["ResponseStatus"]["IsSuccess"] is True
+
+            # 验证 SDK save 被调用，且 Model 中包含 FID
+            mock_sdk.save.assert_called_once()
+            call_args = mock_sdk.save.call_args
+            assert call_args[0][0] == "SAL_SaleOrder"  # form_id
+            model = call_args[0][1]["Model"]
+            assert model["FID"] == 100001
+
+    @pytest.mark.asyncio
+    async def test_update_object_validation_error(
+        self,
+        standard_context: ConnectorContext,
+        mock_token_cache: Any,
+        mock_sdk_class: MagicMock,
+    ) -> None:
+        """测试更新对象 - 验证失败"""
+        from qdata_adapter_kd_galaxy.exceptions import KdGalaxyAdapterValidationError
+
+        mock_sdk = mock_sdk_class.return_value
+        mock_sdk.save.return_value = {
+            "Result": {
+                "ResponseStatus": {
+                    "IsSuccess": False,
+                    "Errors": [
+                        {"FieldName": "FNote", "Message": "备注字段超出最大长度"}
+                    ],
+                },
+            }
+        }
+
+        with patch(
+            "qdata_adapter_kd_galaxy.interfaces.standard.KdGalaxySDK",
+            mock_sdk_class,
+        ):
+            adapter = KdGalaxyAdapter(standard_context, mock_token_cache)
+            data = {
+                "FID": 100001,
+                "FNote": "x" * 1000,  # 超出长度限制
+            }
+
+            with pytest.raises(KdGalaxyAdapterValidationError) as exc_info:
+                await adapter.update_object("SAL_SaleOrder", "100001", data)
+
+            assert "FNote" in exc_info.value.field_errors
 
     @pytest.mark.asyncio
     async def test_test_connection_success(

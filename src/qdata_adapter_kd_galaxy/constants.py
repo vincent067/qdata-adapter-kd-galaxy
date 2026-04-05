@@ -6,13 +6,13 @@ kd-galaxy 适配器常量定义
 
 from enum import Enum
 
-
 # =============================================================================
 # API 服务配置
 # =============================================================================
 
 # API 服务基础路径
 API_SERVICE_BASE = "Kingdee.BOS.WebApi.ServicesStub.DynamicFormService"
+
 
 # API 操作端点
 class KingdeeAPIOperations(str, Enum):
@@ -63,13 +63,13 @@ def get_api_url(base_url: str, operation: str | KingdeeAPIOperations) -> str:
 # =============================================================================
 
 FIELD_TYPE_MAPPING = {
-    56: "integer",      # 整数
-    61: "datetime",     # 日期时间
-    106: "decimal",     # 小数
-    127: "base_data",   # 基础资料
-    167: "enum",        # 枚举
-    175: "enum",        # 单据状态枚举
-    231: "string",      # 字符串
+    56: "integer",  # 整数
+    61: "datetime",  # 日期时间
+    106: "decimal",  # 小数
+    127: "base_data",  # 基础资料
+    167: "enum",  # 枚举
+    175: "enum",  # 单据状态枚举
+    231: "string",  # 字符串
 }
 
 
@@ -97,21 +97,23 @@ REQUEST_TIMEOUT = 300
 # 认证配置键名
 # =============================================================================
 
+
 class AuthConfigKeys(str, Enum):
     """认证配置键名"""
 
-    ACCT_ID = "acct_id"           # 账套ID (data_center_id)
-    USERNAME = "username"          # 用户名
-    APP_ID = "app_id"             # 应用ID
-    APP_SECRET = "app_secret"     # 应用密钥
-    LCID = "lcid"                 # 语言ID
-    SERVER_URL = "server_url"     # 服务器URL
-    ORG_NUM = "org_num"           # 组织编码
+    ACCT_ID = "acct_id"  # 账套ID (data_center_id)
+    USERNAME = "username"  # 用户名
+    APP_ID = "app_id"  # 应用ID
+    APP_SECRET = "app_secret"  # 应用密钥
+    LCID = "lcid"  # 语言ID
+    SERVER_URL = "server_url"  # 服务器URL
+    ORG_NUM = "org_num"  # 组织编码
 
 
 # =============================================================================
 # 响应状态码
 # =============================================================================
+
 
 class ResponseStatus:
     """响应状态常量"""

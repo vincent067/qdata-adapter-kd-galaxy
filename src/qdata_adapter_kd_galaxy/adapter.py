@@ -10,14 +10,17 @@ KdGalaxyAdapter
 from __future__ import annotations
 
 import logging
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Any
 
-from qdata_adapter import BaseAppAdapter
-from qdata_adapter.context import ConnectorContext
-from qdata_adapter import TestConnectionResult
+from qdata_adapter import BaseAppAdapter, TestConnectionResult
 
-from qdata_adapter_kd_galaxy.interfaces.base import BaseInterface
 from qdata_adapter_kd_galaxy.interfaces.standard import KdGalaxyAdapterStandardInterface
+
+if TYPE_CHECKING:
+    from qdata_adapter.context import ConnectorContext
+
+    from qdata_adapter_kd_galaxy.interfaces.base import BaseInterface
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +71,7 @@ class KdGalaxyAdapter(BaseAppAdapter):
         super().__init__(context, token_cache)
         self._interface = self._resolve_interface()
         logger.debug(
-            "Initialized KdGalaxyAdapter with %s interface",
-            self._interface.interface_name
+            "Initialized KdGalaxyAdapter with %s interface", self._interface.interface_name
         )
 
     def _resolve_interface(self) -> BaseInterface:
@@ -173,6 +175,27 @@ class KdGalaxyAdapter(BaseAppAdapter):
         """
         return await self._interface.create_object(object_type, data)
 
+    async def update_object(
+        self,
+        object_type: str,
+        object_id: str,
+        data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        更新对象
+
+        使用 Save 接口更新单据（通过 FID 标识为更新操作）
+
+        Args:
+            object_type: 表单ID
+            object_id: 单据内码（FID）
+            data: 单据数据（应包含 FID）
+
+        Returns:
+            更新结果
+        """
+        return await self._interface.update_object(object_type, object_id, data)
+
     async def submit_object(
         self,
         object_type: str,
@@ -211,9 +234,7 @@ class KdGalaxyAdapter(BaseAppAdapter):
         Returns:
             审核结果
         """
-        return await self._interface.audit_object(
-            object_type, object_id=object_id, numbers=numbers
-        )
+        return await self._interface.audit_object(object_type, object_id=object_id, numbers=numbers)
 
     async def unaudit_object(
         self,
@@ -303,7 +324,7 @@ class KdGalaxyAdapter(BaseAppAdapter):
         try:
             if await self._interface.health_check():
                 return TestConnectionResult.connected(
-                    message=f"kd-galaxy 连接成功",
+                    message="kd-galaxy 连接成功",
                     duration_ms=int((time.time() - start_time) * 1000),
                     metadata={
                         "interface": self._interface.interface_name,

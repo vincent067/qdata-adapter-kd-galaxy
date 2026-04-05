@@ -22,8 +22,8 @@ from typing import Any
 
 import pytest
 from dotenv import load_dotenv
-
 from qdata_adapter import ConnectorContext
+
 from qdata_adapter_kd_galaxy import KdGalaxyAdapter
 
 # 加载 .env 配置
@@ -148,7 +148,7 @@ class TestSALSaleOrderWorkflow:
 
         # 从文件读取订单列表
         try:
-            with open("/tmp/e2e_sale_orders.json", "r", encoding="utf-8") as f:
+            with open("/tmp/e2e_sale_orders.json", encoding="utf-8") as f:
                 orders = json.load(f)
         except Exception:
             pytest.skip("没有可查询详情的销售订单")
@@ -207,7 +207,7 @@ class TestSALSaleOrderWorkflow:
 
         # 从文件读取订单详情
         try:
-            with open("/tmp/e2e_sale_order_detail.json", "r", encoding="utf-8") as f:
+            with open("/tmp/e2e_sale_order_detail.json", encoding="utf-8") as f:
                 order_detail = json.load(f)
         except Exception:
             order_detail = {}
@@ -260,13 +260,13 @@ class TestSALSaleOrderWorkflow:
             "FSaleOrderEntry": [material_entry],
         }
 
-        logger.info(f"\n  创建销售订单:")
+        logger.info("\n  创建销售订单:")
         logger.info(f"    FBillNo: {new_order['FBillNo']}")
         logger.info(f"    FCustId: {customer_number}")
 
         try:
             result = await adapter.create_object("SAL_SaleOrder", new_order)
-            logger.info(f"\n  保存结果:")
+            logger.info("\n  保存结果:")
             logger.info(f"    Id: {result.get('Id')}")
             logger.info(f"    Number: {result.get('Number')}")
             logger.info(f"    Success: {result.get('ResponseStatus', {}).get('IsSuccess')}")
@@ -292,7 +292,7 @@ class TestSALSaleOrderWorkflow:
         logger.info("=" * 60)
 
         try:
-            with open("/tmp/e2e_saved_sale_order.json", "r", encoding="utf-8") as f:
+            with open("/tmp/e2e_saved_sale_order.json", encoding="utf-8") as f:
                 saved_order = json.load(f)
             order_number = saved_order.get("number")
         except Exception:
@@ -302,7 +302,7 @@ class TestSALSaleOrderWorkflow:
 
         try:
             result = await adapter.submit_object("SAL_SaleOrder", numbers=[order_number])
-            logger.info(f"\n  提交结果:")
+            logger.info("\n  提交结果:")
             logger.info(f"    Success: {result.get('ResponseStatus', {}).get('IsSuccess')}")
             logger.info(f"    SuccessEntitys: {result.get('SuccessEntitys')}")
 
@@ -319,7 +319,7 @@ class TestSALSaleOrderWorkflow:
         logger.info("=" * 60)
 
         try:
-            with open("/tmp/e2e_saved_sale_order.json", "r", encoding="utf-8") as f:
+            with open("/tmp/e2e_saved_sale_order.json", encoding="utf-8") as f:
                 saved_order = json.load(f)
             order_number = saved_order.get("number")
         except Exception:
@@ -329,7 +329,7 @@ class TestSALSaleOrderWorkflow:
 
         try:
             result = await adapter.audit_object("SAL_SaleOrder", numbers=[order_number])
-            logger.info(f"\n  审核结果:")
+            logger.info("\n  审核结果:")
             logger.info(f"    Success: {result.get('ResponseStatus', {}).get('IsSuccess')}")
 
             return result
@@ -345,7 +345,7 @@ class TestSALSaleOrderWorkflow:
         logger.info("=" * 60)
 
         try:
-            with open("/tmp/e2e_saved_sale_order.json", "r", encoding="utf-8") as f:
+            with open("/tmp/e2e_saved_sale_order.json", encoding="utf-8") as f:
                 saved_order = json.load(f)
             order_number = saved_order.get("number")
         except Exception:
@@ -355,7 +355,7 @@ class TestSALSaleOrderWorkflow:
 
         try:
             result = await adapter.unaudit_object("SAL_SaleOrder", numbers=[order_number])
-            logger.info(f"\n  反审核结果:")
+            logger.info("\n  反审核结果:")
             logger.info(f"    Success: {result.get('ResponseStatus', {}).get('IsSuccess')}")
 
             return result
@@ -371,7 +371,7 @@ class TestSALSaleOrderWorkflow:
         logger.info("=" * 60)
 
         try:
-            with open("/tmp/e2e_saved_sale_order.json", "r", encoding="utf-8") as f:
+            with open("/tmp/e2e_saved_sale_order.json", encoding="utf-8") as f:
                 saved_order = json.load(f)
             order_number = saved_order.get("number")
         except Exception:
@@ -381,7 +381,7 @@ class TestSALSaleOrderWorkflow:
 
         try:
             result = await adapter.delete_object("SAL_SaleOrder", numbers=[order_number])
-            logger.info(f"\n  删除结果:")
+            logger.info("\n  删除结果:")
             logger.info(f"    Success: {result.get('ResponseStatus', {}).get('IsSuccess')}")
 
             return result

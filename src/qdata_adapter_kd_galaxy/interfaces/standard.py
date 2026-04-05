@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from k3cloud_webapi_sdk.main import K3CloudApiSdk
 
@@ -17,7 +18,6 @@ from qdata_adapter_kd_galaxy.constants import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
     AuthConfigKeys,
-    KingdeeAPIOperations,
 )
 
 from .base import BaseInterface
@@ -186,7 +186,7 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
 
     interface_name = "standard"
 
-    def __init__(self, context: "ConnectorContext", http_client: Any = None) -> None:
+    def __init__(self, context: ConnectorContext, http_client: Any = None) -> None:
         super().__init__(context, http_client)
         self._sdk: KdGalaxySDK | None = None
 
@@ -280,11 +280,13 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
         try:
             sdk = self._get_sdk()
             # 通过执行一个简单查询来验证认证
-            sdk.execute_bill_query({
-                "FormId": "BD_MATERIAL",
-                "FieldKeys": "FNumber",
-                "Limit": 1,
-            })
+            sdk.execute_bill_query(
+                {
+                    "FormId": "BD_MATERIAL",
+                    "FieldKeys": "FNumber",
+                    "Limit": 1,
+                }
+            )
             return {
                 "authenticated": True,
                 "message": "SDK configured successfully",
@@ -449,9 +451,7 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
                 response_status = result.get("ResponseStatus", {})
                 errors = response_status.get("Errors", [])
                 if errors:
-                    return "; ".join(
-                        e.get("Message", "Unknown error") for e in errors
-                    )
+                    return "; ".join(e.get("Message", "Unknown error") for e in errors)
                 error_msg = response_status.get("Message", "")
                 if error_msg:
                     return error_msg
@@ -511,11 +511,10 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
             response_status = result.get("ResponseStatus", {})
             if not response_status.get("IsSuccess"):
                 errors = response_status.get("Errors", [])
-                error_messages = [
-                    e.get("Message", "") for e in errors if isinstance(e, dict)
-                ]
+                error_messages = [e.get("Message", "") for e in errors if isinstance(e, dict)]
+                error_msg = error_messages[0] if error_messages else "Unknown error"
                 raise KdGalaxyAdapterAPIError(
-                    f"Failed to get {object_type}/{object_id}: {', '.join(error_messages) or 'Unknown error'}",
+                    f"Failed to get {object_type}/{object_id}: {error_msg}",
                     response_body=result,
                 )
 
@@ -615,8 +614,9 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
                         details={"errors": errors},
                     )
 
+                error_msg = error_messages[0] if error_messages else "Unknown error"
                 raise KdGalaxyAdapterAPIError(
-                    f"Failed to create {object_type}: {', '.join(error_messages) or 'Unknown error'}",
+                    f"Failed to create {object_type}: {error_msg}",
                     response_body=response,
                 )
 
@@ -634,6 +634,127 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
             raise KdGalaxyAdapterAPIError(
                 f"Failed to create {object_type}",
                 details={"object_type": object_type, "error": str(e)},
+            ) from e
+
+    async def update_object(
+        self,
+        object_type: str,
+        object_id: str,
+        data: dict[str, Any],
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """
+        更新对象
+
+        使用 Save 接口更新单据（通过 Model 中的 FID 标识为更新操作）
+
+        金蝶 Save API 支持两种模式：
+        - 不带 FID 或 FID=0：创建新单据
+        - 带 FID（有效值）：更新已有单据
+
+        Args:
+            object_type: 表单ID
+            object_id: 单据内码（FID），用于构建更新数据
+            data: 单据数据（Model 部分），应包含 FID
+            params: 额外参数，如 NeedUpDateFields 指定需要更新的字段
+
+        Returns:
+            更新结果，包含 Id, Number 等
+
+        Raises:
+            KdGalaxyAdapterValidationError: 数据验证失败
+            KdGalaxyAdapterAPIError: API 调用失败
+        """
+        from qdata_adapter_kd_galaxy.exceptions import (
+            KdGalaxyAdapterAPIError,
+            KdGalaxyAdapterValidationError,
+        )
+
+        sdk = self._get_sdk()
+        params = params or {}
+
+        # 确保 data 中包含 FID（用于标识为更新操作）
+        update_data = dict(data) if data else {}
+        if "FID" not in update_data and object_id:
+            update_data["FID"] = int(object_id) if object_id.isdigit() else object_id
+
+        # 构建更新参数
+        # NeedUpDateFields 指定需要更新的字段，为空表示更新所有字段
+        save_params = {
+            "NeedUpDateFields": params.get("NeedUpDateFields", []),
+            "NeedReturnFields": params.get("NeedReturnFields", []),
+            "IsDeleteEntry": params.get("IsDeleteEntry", "False"),  # 更新时通常不删除分录
+            "SubSystemId": "",
+            "IsVerifyBaseDataField": "False",
+            "IsEntryBatchFill": "True",
+            "ValidateFlag": "True",
+            "NumberSearch": "True",
+            "IsAutoAdjustField": "False",
+            "InterationFlags": "",
+            "IgnoreInterationFlag": "",
+            "IsControlPrecision": "False",
+            "ValidateRepeatJson": "False",
+            "IsAutoSubmitAndAudit": "False",
+            "Model": update_data,
+        }
+
+        # 更新特定字段时的额外参数
+        if "NeedUpDateFields" in params:
+            save_params.update(
+                {
+                    k: v
+                    for k, v in params.items()
+                    if k in ("NeedUpDateFields", "NeedReturnFields", "IsDeleteEntry")
+                }
+            )
+
+        try:
+            response = sdk.save(object_type, save_params)
+
+            # 检查保存结果
+            result = response.get("Result", {})
+            response_status = result.get("ResponseStatus", {})
+
+            if not response_status.get("IsSuccess"):
+                errors = response_status.get("Errors", [])
+                field_errors = {}
+                error_messages = []
+
+                for error in errors:
+                    if isinstance(error, dict):
+                        field_name = error.get("FieldName", "")
+                        message = error.get("Message", "")
+                        if field_name:
+                            field_errors[field_name] = message
+                        error_messages.append(message)
+
+                if field_errors:
+                    raise KdGalaxyAdapterValidationError(
+                        "Validation failed",
+                        field_errors=field_errors,
+                        details={"errors": errors},
+                    )
+
+                error_msg = error_messages[0] if error_messages else "Unknown error"
+                raise KdGalaxyAdapterAPIError(
+                    f"Failed to update {object_type}/{object_id}: {error_msg}",
+                    response_body=response,
+                )
+
+            # 返回更新结果
+            return {
+                "Id": result.get("Id"),
+                "Number": result.get("Number"),
+                "SuccessEntitys": response_status.get("SuccessEntitys", []),
+                "ResponseStatus": response_status,
+            }
+
+        except (KdGalaxyAdapterValidationError, KdGalaxyAdapterAPIError):
+            raise
+        except Exception as e:
+            raise KdGalaxyAdapterAPIError(
+                f"Failed to update {object_type}/{object_id}",
+                details={"object_type": object_type, "object_id": object_id, "error": str(e)},
             ) from e
 
     async def submit_object(
@@ -736,9 +857,7 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
 
             if not response_status.get("IsSuccess"):
                 errors = response_status.get("Errors", [])
-                error_messages = [
-                    e.get("Message", "") for e in errors if isinstance(e, dict)
-                ]
+                error_messages = [e.get("Message", "") for e in errors if isinstance(e, dict)]
                 raise KdGalaxyAdapterAPIError(
                     f"{operation} failed: {', '.join(error_messages) or 'Unknown error'}",
                     response_body=response,
@@ -887,9 +1006,7 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
 
             if not response_status.get("IsSuccess"):
                 errors = response_status.get("Errors", [])
-                error_messages = [
-                    e.get("Message", "") for e in errors if isinstance(e, dict)
-                ]
+                error_messages = [e.get("Message", "") for e in errors if isinstance(e, dict)]
                 raise KdGalaxyAdapterAPIError(
                     f"excute_operation failed: {', '.join(error_messages) or 'Unknown error'}",
                     response_body=response,
@@ -903,7 +1020,7 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
             raise
         except Exception as e:
             raise KdGalaxyAdapterAPIError(
-                f"excute_operation failed",
+                "excute_operation failed",
                 details={"object_type": object_type, "error": str(e)},
             ) from e
 
@@ -934,9 +1051,7 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
 
             if not response_status.get("IsSuccess"):
                 errors = response_status.get("Errors", [])
-                error_messages = [
-                    e.get("Message", "") for e in errors if isinstance(e, dict)
-                ]
+                error_messages = [e.get("Message", "") for e in errors if isinstance(e, dict)]
                 raise KdGalaxyAdapterAPIError(
                     f"workflow_audit failed: {', '.join(error_messages) or 'Unknown error'}",
                     response_body=response,
@@ -950,7 +1065,7 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
             raise
         except Exception as e:
             raise KdGalaxyAdapterAPIError(
-                f"workflow_audit failed",
+                "workflow_audit failed",
                 details={"error": str(e)},
             ) from e
 
@@ -967,11 +1082,13 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
         try:
             sdk = self._get_sdk()
             # 执行一个简单查询来验证连接
-            sdk.execute_bill_query({
-                "FormId": "BD_MATERIAL",
-                "FieldKeys": "FNumber",
-                "Limit": 1,
-            })
+            sdk.execute_bill_query(
+                {
+                    "FormId": "BD_MATERIAL",
+                    "FieldKeys": "FNumber",
+                    "Limit": 1,
+                }
+            )
             return True
         except Exception as e:
             logger.warning("Health check failed: %s", e)

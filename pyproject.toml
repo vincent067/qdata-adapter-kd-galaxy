@@ -191,12 +191,16 @@ select = [
 ignore = [
     "ANN101",
     "ANN102",
+    "ANN401",  # Allow dynamically typed Any for token_cache
     "COM812",
     "C901",
+    "S105",    # False positive for API constant names like APP_SECRET
+    "UP042",   # StrEnum inheritance warnings
+    "TC003",   # AsyncIterator in TYPE_CHECKING
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ANN", "S101"]
+"tests/*" = ["ANN", "S101", "E501", "F541", "PTH123", "S108"]  # Allow test-specific patterns
 "examples/*" = ["ANN"]
 
 [tool.ruff.lint.isort]
