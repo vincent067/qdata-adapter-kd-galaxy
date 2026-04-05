@@ -3,30 +3,43 @@
 
 运行方式:
     python -m pytest tests/e2e_test.py -v -s
+
+配置:
+    从项目根目录的 .env 文件读取测试配置
 """
 
 import json
 import logging
+import os
 import time
+from pathlib import Path
 from typing import Any
 
 import pytest
+from dotenv import load_dotenv
 
 from qdata_adapter import ConnectorContext
 from qdata_adapter_kd_galaxy import KdGalaxyAdapter
+
+# 加载 .env 配置
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+else:
+    raise RuntimeError(f".env file not found at {env_path}")
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 测试环境配置
+# 从环境变量读取配置
 TEST_ENV = {
-    "host": "http://env.qeasy.cloud/k3cloud/",
-    "data_center_id": "YOUR_DATA_CENTER_ID",
-    "username": "YOUR_USERNAME",
-    "app_id": "YOUR_APP_ID",
-    "app_secret": "YOUR_APP_SECRET",
-    "language": "2052",
+    "host": os.getenv("KD_GALAXY_BASE_URL", "http://env.qeasy.cloud/k3cloud/"),
+    "data_center_id": os.getenv("KD_GALAXY_ACCT_ID", ""),
+    "username": os.getenv("KD_GALAXY_USERNAME", ""),
+    "app_id": os.getenv("KD_GALAXY_APP_ID", ""),
+    "app_secret": os.getenv("KD_GALAXY_APP_SECRET", ""),
+    "language": os.getenv("KD_GALAXY_LCID", "2052"),
 }
 
 

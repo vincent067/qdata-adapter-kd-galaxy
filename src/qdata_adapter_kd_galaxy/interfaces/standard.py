@@ -143,6 +143,39 @@ class KdGalaxySDK:
         response = self._sdk.BatchSave(form_id, params)
         return json.loads(response)
 
+    def excute_operation(
+        self,
+        form_id: str,
+        op_number: str,
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        执行操作（如关闭、打开等）
+
+        Args:
+            form_id: 表单ID
+            op_number: 操作编码（如 YLBillClose, YLMRPClose）
+            params: 操作参数
+
+        Returns:
+            操作结果
+        """
+        response = self._sdk.ExcuteOperation(form_id, op_number, params)
+        return json.loads(response)
+
+    def workflow_audit(self, params: dict[str, Any]) -> dict[str, Any]:
+        """
+        工作流审批
+
+        Args:
+            params: 审批参数，包含 FormId, Ids/Numbers, UserId, ApprovalType 等
+
+        Returns:
+            审批结果
+        """
+        response = self._sdk.WorkflowAudit(params)
+        return json.loads(response)
+
 
 class KdGalaxyAdapterStandardInterface(BaseInterface):
     """
@@ -336,6 +369,14 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
                 headers = field_keys.split(",")
 
             for row in data_array:
+                # 检测是否是错误响应行
+                if self._is_error_row(row, headers):
+                    error_msg = self._extract_error_from_row(row, headers)
+                    logger.warning(
+                        "Skipping row with error response: %s",
+                        error_msg,
+                    )
+                    continue
                 record = self._convert_row_to_dict(headers, row)
                 yield record
 
@@ -363,6 +404,58 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
             if i < len(row):
                 record[header] = row[i]
         return record
+
+    def _is_error_row(self, row: Any, headers: list) -> bool:
+        """
+        检测行数据是否是错误响应
+
+        Kingdee API 有时会返回错误信息嵌入在数据行中，
+        例如: {"FBillNo": {"Result": {"ResponseStatus": {"ErrorCode": 500, ...}}}}
+
+        Args:
+            row: 行数据
+            headers: 表头列表
+
+        Returns:
+            True 如果是错误响应行
+        """
+        if not isinstance(row, dict):
+            return False
+
+        # 检查是否有任何一个字段值包含错误响应结构
+        for header in headers:
+            value = row.get(header)
+            if isinstance(value, dict) and "Result" in value:
+                result = value.get("Result", {})
+                if isinstance(result, dict) and "ResponseStatus" in result:
+                    return True
+        return False
+
+    def _extract_error_from_row(self, row: Any, headers: list) -> str:
+        """
+        从错误响应行中提取错误信息
+
+        Args:
+            row: 行数据
+            headers: 表头列表
+
+        Returns:
+            错误信息字符串
+        """
+        for header in headers:
+            value = row.get(header)
+            if isinstance(value, dict) and "Result" in value:
+                result = value.get("Result", {})
+                response_status = result.get("ResponseStatus", {})
+                errors = response_status.get("Errors", [])
+                if errors:
+                    return "; ".join(
+                        e.get("Message", "Unknown error") for e in errors
+                    )
+                error_msg = response_status.get("Message", "")
+                if error_msg:
+                    return error_msg
+        return "Unknown error"
 
     async def get_object(
         self,
@@ -747,12 +840,119 @@ class KdGalaxyAdapterStandardInterface(BaseInterface):
             )
             return {"data": result}
 
+        elif method == "excute_operation":
+            result = await self.excute_operation(object_type, params=params)
+            return {"data": result}
+
+        elif method == "workflow_audit":
+            result = await self.workflow_audit(params=params)
+            return {"data": result}
+
         else:
             raise NotImplementedError(
                 f"Method '{method}' not implemented. "
                 f"Supported methods: query, list, get, view, create, save, "
-                f"submit, audit, unaudit, delete"
+                f"submit, audit, unaudit, delete, excute_operation, workflow_audit"
             )
+
+    async def excute_operation(
+        self,
+        object_type: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """
+        执行操作（如关闭、打开等）
+
+        Args:
+            object_type: 表单ID
+            params: 操作参数，包含 opNumber, Numbers/Ids 等
+
+        Returns:
+            操作结果
+        """
+        from qdata_adapter_kd_galaxy.exceptions import KdGalaxyAdapterAPIError
+
+        sdk = self._get_sdk()
+        params = params or {}
+
+        op_number = params.pop("opNumber", "")
+        if not op_number:
+            raise ValueError("'excute_operation' requires params['opNumber']")
+
+        try:
+            response = sdk.excute_operation(object_type, op_number, params)
+
+            result = response.get("Result", {})
+            response_status = result.get("ResponseStatus", {})
+
+            if not response_status.get("IsSuccess"):
+                errors = response_status.get("Errors", [])
+                error_messages = [
+                    e.get("Message", "") for e in errors if isinstance(e, dict)
+                ]
+                raise KdGalaxyAdapterAPIError(
+                    f"excute_operation failed: {', '.join(error_messages) or 'Unknown error'}",
+                    response_body=response,
+                )
+
+            return {
+                "SuccessEntitys": response_status.get("SuccessEntitys", []),
+                "ResponseStatus": response_status,
+            }
+        except KdGalaxyAdapterAPIError:
+            raise
+        except Exception as e:
+            raise KdGalaxyAdapterAPIError(
+                f"excute_operation failed",
+                details={"object_type": object_type, "error": str(e)},
+            ) from e
+
+    async def workflow_audit(self, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        """
+        工作流审批
+
+        Args:
+            params: 审批参数，包含 FormId, Ids/Numbers, UserId, ApprovalType 等
+
+        Returns:
+            审批结果
+        """
+        from qdata_adapter_kd_galaxy.exceptions import KdGalaxyAdapterAPIError
+
+        sdk = self._get_sdk()
+        params = params or {}
+
+        form_id = params.get("FormId")
+        if not form_id:
+            raise ValueError("'workflow_audit' requires params['FormId']")
+
+        try:
+            response = sdk.workflow_audit(params)
+
+            result = response.get("Result", {})
+            response_status = result.get("ResponseStatus", {})
+
+            if not response_status.get("IsSuccess"):
+                errors = response_status.get("Errors", [])
+                error_messages = [
+                    e.get("Message", "") for e in errors if isinstance(e, dict)
+                ]
+                raise KdGalaxyAdapterAPIError(
+                    f"workflow_audit failed: {', '.join(error_messages) or 'Unknown error'}",
+                    response_body=response,
+                )
+
+            return {
+                "SuccessEntitys": response_status.get("SuccessEntitys", []),
+                "ResponseStatus": response_status,
+            }
+        except KdGalaxyAdapterAPIError:
+            raise
+        except Exception as e:
+            raise KdGalaxyAdapterAPIError(
+                f"workflow_audit failed",
+                details={"error": str(e)},
+            ) from e
 
     async def health_check(self) -> bool:
         """
