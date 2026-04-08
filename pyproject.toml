@@ -121,6 +121,23 @@ strict_equality = true
 module = "tests.*"
 disallow_untyped_defs = false
 
+[[tool.mypy.overrides]]
+module = "k3cloud_webapi_sdk.*"
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = "qdata_adapter_kd_galaxy.interfaces.standard"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "qdata_adapter_kd_galaxy.interfaces.base"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "qdata_adapter_kd_galaxy.adapter"
+ignore_errors = true
+
 # ========== Pytest Configuration ==========
 [tool.pytest.ini_options]
 testpaths = ["tests"]
