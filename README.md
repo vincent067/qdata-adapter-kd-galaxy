@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+"></a>
-  <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="License: AGPL v3"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://pypi.org/project/qdata-adapter-kd-galaxy/"><img src="https://img.shields.io/pypi/v/qdata-adapter-kd-galaxy.svg" alt="PyPI version"></a>
   <a href="https://github.com/qeasy/qdata-adapter-kd-galaxy/actions/workflows/ci.yml"><img src="https://github.com/qeasy/qdata-adapter-kd-galaxy/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
@@ -175,27 +175,21 @@ make check
 
 ---
 
-## 📄 许可与商业政策
+## 📄 许可证
 
-### 🔓 开源协议
+本项目采用 **MIT License** 开源协议。
 
-本项目采用 **GNU Affero General Public License v3.0 (AGPL-3.0)** 开源协议。
+MIT 许可证是一种宽松的软件许可证，允许：
 
-- ✅ **个人学习/研究**：完全免费，无需授权
-- ✅ **开源项目**：可自由使用，需遵守 AGPL-3.0 条款
-- ✅ **修改与分发**：允许修改和重新分发，但必须保持开源
+- ✅ **自由使用**：个人、学术、商业用途均可
+- ✅ **自由修改**：可以修改源代码
+- ✅ **自由分发**：可以重新分发源代码或二进制版本
+- ✅ **闭源使用**：修改后的代码可以闭源
+- ✅ **子许可**：可以再许可给其他方
 
-**重要**：如果你修改本软件并提供网络服务（包括内部使用），根据 AGPL-3.0 条款，你必须公开你的修改源代码。
+唯一要求是：在所有副本中包含原始许可证和版权声明。
 
-### 💼 商业用途
-
-任何**商业用途**必须单独购买商业许可。
-
-**商业许可咨询**：📧 vincent@qeasy.cloud
-
-### ⚠️ 重要提示
-
-**未经授权的商业使用将构成版权侵权，我们保留追究法律责任的权利。**
+详见 [LICENSE](LICENSE) 文件。
 
 ---
 
