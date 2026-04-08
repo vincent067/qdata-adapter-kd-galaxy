@@ -23,49 +23,51 @@ class TestKdGalaxyAdapter:
     def mock_sdk(self) -> MagicMock:
         """创建 mock SDK 实例"""
         mock = MagicMock()
-        mock.configure_mock(**{
-            "is_configured.return_value": True,
-            # Kingdee ExecuteBillQuery 返回 2D 数组，每行都是数据
-            # FieldKeys 指定了字段顺序，数据行顺序对应
-            "execute_bill_query.return_value": [
-                ["物料1", "MTL001", {"FNumber": "MTL001", "FName": "物料1"}],
-                ["物料2", "MTL002", {"FNumber": "MTL002", "FName": "物料2"}],
-            ],
-            "view.return_value": {
-                "ResponseStatus": {"IsSuccess": True},
-                "Result": {
-                    "Id": 100001,
-                    "BillNo": "SAL001",
-                    "DocumentStatus": "C",
-                },
-            },
-            "save.return_value": {
-                "Result": {
-                    "ResponseStatus": {
-                        "IsSuccess": True,
-                        "SuccessEntitys": [{"Id": 100002, "Number": "SAL_NEW_001"}],
+        mock.configure_mock(
+            **{
+                "is_configured.return_value": True,
+                # Kingdee ExecuteBillQuery 返回 2D 数组，每行都是数据
+                # FieldKeys 指定了字段顺序，数据行顺序对应
+                "execute_bill_query.return_value": [
+                    ["物料1", "MTL001", {"FNumber": "MTL001", "FName": "物料1"}],
+                    ["物料2", "MTL002", {"FNumber": "MTL002", "FName": "物料2"}],
+                ],
+                "view.return_value": {
+                    "ResponseStatus": {"IsSuccess": True},
+                    "Result": {
+                        "Id": 100001,
+                        "BillNo": "SAL001",
+                        "DocumentStatus": "C",
                     },
-                    "Id": 100002,
-                    "Number": "SAL_NEW_001",
-                }
-            },
-            "audit.return_value": {
-                "Result": {
-                    "ResponseStatus": {
-                        "IsSuccess": True,
-                        "SuccessEntitys": [{"Id": 100001, "Number": "SAL001"}],
+                },
+                "save.return_value": {
+                    "Result": {
+                        "ResponseStatus": {
+                            "IsSuccess": True,
+                            "SuccessEntitys": [{"Id": 100002, "Number": "SAL_NEW_001"}],
+                        },
+                        "Id": 100002,
+                        "Number": "SAL_NEW_001",
                     }
-                }
-            },
-            "submit.return_value": {
-                "Result": {
-                    "ResponseStatus": {
-                        "IsSuccess": True,
-                        "SuccessEntitys": [{"Id": 100001, "Number": "SAL001"}],
+                },
+                "audit.return_value": {
+                    "Result": {
+                        "ResponseStatus": {
+                            "IsSuccess": True,
+                            "SuccessEntitys": [{"Id": 100001, "Number": "SAL001"}],
+                        }
                     }
-                }
-            },
-        })
+                },
+                "submit.return_value": {
+                    "Result": {
+                        "ResponseStatus": {
+                            "IsSuccess": True,
+                            "SuccessEntitys": [{"Id": 100001, "Number": "SAL001"}],
+                        }
+                    }
+                },
+            }
+        )
         return mock
 
     @pytest.fixture
@@ -289,9 +291,7 @@ class TestKdGalaxyAdapter:
             "Result": {
                 "ResponseStatus": {
                     "IsSuccess": False,
-                    "Errors": [
-                        {"FieldName": "FNote", "Message": "备注字段超出最大长度"}
-                    ],
+                    "Errors": [{"FieldName": "FNote", "Message": "备注字段超出最大长度"}],
                 },
             }
         }
@@ -389,9 +389,7 @@ class TestKdGalaxyAdapter:
             mock_sdk_class,
         ):
             adapter = KdGalaxyAdapter(standard_context, mock_token_cache)
-            result = await adapter.invoke(
-                "audit", "SAL_OUTSTOCK", params={"Numbers": ["SAL001"]}
-            )
+            result = await adapter.invoke("audit", "SAL_OUTSTOCK", params={"Numbers": ["SAL001"]})
 
             assert "data" in result
             assert result["data"]["ResponseStatus"]["IsSuccess"] is True

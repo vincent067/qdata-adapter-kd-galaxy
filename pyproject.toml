@@ -7,7 +7,7 @@ name = "qdata-adapter-kd-galaxy"
 version = "0.1.0"
 description = "QDataV2 adapter for kd-galaxy"
 readme = "README.md"
-license = {text = "AGPL-3.0"}
+license = "AGPL-3.0"
 authors = [
     {name = "广东轻亿云软件科技有限公司", email = "opensource@qeasy.cloud"}
 ]
@@ -19,7 +19,6 @@ keywords = ["qdata", "adapter", "kd-galaxy", "integration", "qeasy"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",

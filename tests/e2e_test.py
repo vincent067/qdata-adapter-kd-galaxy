@@ -169,11 +169,16 @@ class TestBDBankE2E:
 
         # 保存到临时文件
         with open("/tmp/e2e_saved_bank.json", "w", encoding="utf-8") as f:
-            json.dump({
-                "id": result.get("Id"),
-                "number": result.get("Number"),
-                "data": new_bank_data,
-            }, f, ensure_ascii=False, indent=2)
+            json.dump(
+                {
+                    "id": result.get("Id"),
+                    "number": result.get("Number"),
+                    "data": new_bank_data,
+                },
+                f,
+                ensure_ascii=False,
+                indent=2,
+            )
 
         assert result.get("Id"), "保存应该返回 Id"
         return result
@@ -308,7 +313,9 @@ class TestPURPurchaseOrderE2E:
                 supplier_name = supplier.get("FName", "")
             else:
                 supplier_name = str(supplier)
-            logger.info(f"   单据: {record.get('FBillNo')} - 供应商: {supplier_name} - 状态: {record.get('FDocumentStatus')}")
+            logger.info(
+                f"   单据: {record.get('FBillNo')} - 供应商: {supplier_name} - 状态: {record.get('FDocumentStatus')}"
+            )
 
         logger.info(f"\n  成功获取 {len(orders)} 条采购订单")
 
@@ -360,26 +367,43 @@ class TestPURPurchaseOrderE2E:
 
                 # 保存创建结果
                 with open("/tmp/e2e_po_saved.json", "w", encoding="utf-8") as f:
-                    json.dump({
-                        "id": new_order_id,
-                        "number": new_order_no,
-                    }, f, ensure_ascii=False, indent=2)
+                    json.dump(
+                        {
+                            "id": new_order_id,
+                            "number": new_order_no,
+                        },
+                        f,
+                        ensure_ascii=False,
+                        indent=2,
+                    )
 
                 # 4. 提交
                 if new_order_no:
                     logger.info("\n4. Submit - 提交采购订单")
-                    submit_result = await adapter.submit_object("PUR_PurchaseOrder", numbers=[new_order_no])
-                    logger.info(f"   提交结果: {submit_result.get('ResponseStatus', {}).get('IsSuccess')}")
+                    submit_result = await adapter.submit_object(
+                        "PUR_PurchaseOrder", numbers=[new_order_no]
+                    )
+                    logger.info(
+                        f"   提交结果: {submit_result.get('ResponseStatus', {}).get('IsSuccess')}"
+                    )
 
                     # 5. 审核
                     logger.info("\n5. Audit - 审核采购订单")
-                    audit_result = await adapter.audit_object("PUR_PurchaseOrder", numbers=[new_order_no])
-                    logger.info(f"   审核结果: {audit_result.get('ResponseStatus', {}).get('IsSuccess')}")
+                    audit_result = await adapter.audit_object(
+                        "PUR_PurchaseOrder", numbers=[new_order_no]
+                    )
+                    logger.info(
+                        f"   审核结果: {audit_result.get('ResponseStatus', {}).get('IsSuccess')}"
+                    )
 
                     # 6. 反审核
                     logger.info("\n6. UnAudit - 反审核采购订单")
-                    unaudit_result = await adapter.unaudit_object("PUR_PurchaseOrder", numbers=[new_order_no])
-                    logger.info(f"   反审核结果: {unaudit_result.get('ResponseStatus', {}).get('IsSuccess')}")
+                    unaudit_result = await adapter.unaudit_object(
+                        "PUR_PurchaseOrder", numbers=[new_order_no]
+                    )
+                    logger.info(
+                        f"   反审核结果: {unaudit_result.get('ResponseStatus', {}).get('IsSuccess')}"
+                    )
 
             except Exception as e:
                 logger.error(f"   操作失败: {e}")

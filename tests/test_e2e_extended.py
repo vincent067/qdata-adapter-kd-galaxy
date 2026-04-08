@@ -273,10 +273,15 @@ class TestSALSaleOrderWorkflow:
 
             # 保存
             with open("/tmp/e2e_saved_sale_order.json", "w", encoding="utf-8") as f:
-                json.dump({
-                    "id": result.get("Id"),
-                    "number": result.get("Number"),
-                }, f, ensure_ascii=False, indent=2)
+                json.dump(
+                    {
+                        "id": result.get("Id"),
+                        "number": result.get("Number"),
+                    },
+                    f,
+                    ensure_ascii=False,
+                    indent=2,
+                )
 
             assert result.get("Id"), "保存应该返回 Id"
             return result

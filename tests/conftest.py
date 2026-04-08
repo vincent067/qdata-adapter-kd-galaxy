@@ -19,8 +19,10 @@ from qdata_adapter import ConnectorContext
 # 尝试加载 python-dotenv
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
+
     def load_dotenv(*args, **kwargs):
         pass
 
@@ -40,6 +42,7 @@ TEST_DATA_DIR = Path(os.getenv("TEST_DATA_DIR", "tests/data"))
 # =============================================================================
 # 辅助函数
 # =============================================================================
+
 
 def save_http_recording(
     test_name: str,
@@ -77,6 +80,7 @@ def save_http_recording(
 # =============================================================================
 # Fixtures
 # =============================================================================
+
 
 @pytest.fixture(scope="session")
 def test_config() -> dict[str, Any]:
@@ -138,6 +142,7 @@ def standard_context(standard_auth_config: dict) -> ConnectorContext:
 @pytest.fixture
 def mock_token_cache() -> Any:
     """Mock Token 缓存 fixture"""
+
     class MockTokenCache:
         _cache: dict[str, Any] = {}
 
@@ -156,17 +161,22 @@ def mock_token_cache() -> Any:
 @pytest.fixture
 def http_recorder():
     """HTTP 记录器 fixture"""
+
     class HTTPRecorder:
         def __init__(self):
             self.records = []
 
-        def record(self, test_name: str, request: dict, response: dict, interface: str = "standard"):
-            self.records.append({
-                "test_name": test_name,
-                "request": request,
-                "response": response,
-                "interface": interface,
-            })
+        def record(
+            self, test_name: str, request: dict, response: dict, interface: str = "standard"
+        ):
+            self.records.append(
+                {
+                    "test_name": test_name,
+                    "request": request,
+                    "response": response,
+                    "interface": interface,
+                }
+            )
             save_http_recording(test_name, request, response, interface)
 
         def clear(self):
@@ -179,14 +189,11 @@ def http_recorder():
 # Pytest 钩子
 # =============================================================================
 
+
 def pytest_configure(config):
     """Pytest 配置钩子"""
-    config.addinivalue_line(
-        "markers", "real_api: 标记需要真实 API 的测试"
-    )
-    config.addinivalue_line(
-        "markers", "record_http: 标记需要录制 HTTP 流量的测试"
-    )
+    config.addinivalue_line("markers", "real_api: 标记需要真实 API 的测试")
+    config.addinivalue_line("markers", "record_http: 标记需要录制 HTTP 流量的测试")
 
 
 def pytest_runtest_setup(item):
