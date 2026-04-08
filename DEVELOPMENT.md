@@ -369,11 +369,10 @@ asyncio.run(test())
 ---
 
 ## 📄 许可
-本项目采用 **AGPL-3.0** 开源协议。
+本项目采用 **MIT License** 开源协议。
 
-- 个人学习/研究：免费
-- 商业用途：需购买商业许可
-- 联系: vincent@qeasy.cloud
+MIT 许可证允许自由使用、修改、分发，包括商业用途。
+详见 [LICENSE](LICENSE) 文件。
 
 ---
 
