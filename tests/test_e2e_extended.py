@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 # 从环境变量读取配置
 TEST_ENV = {
-    "host": os.getenv("KD_GALAXY_BASE_URL", "http://env.qeasy.cloud/k3cloud/"),
+    "host": os.getenv("KD_GALAXY_BASE_URL", "https://api.example.com/k3cloud/"),
     "data_center_id": os.getenv("KD_GALAXY_ACCT_ID", ""),
     "username": os.getenv("KD_GALAXY_USERNAME", ""),
     "app_id": os.getenv("KD_GALAXY_APP_ID", ""),
